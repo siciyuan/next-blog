@@ -63,6 +63,9 @@ export default async function Header() {
                 <img
                   src={config.site.avatar}
                   alt="avatar"
+                  width={36}
+                  height={36}
+                  decoding="async"
                   className="w-9 h-9 rounded-full border border-[var(--border-color)] transition-transform group-hover:rotate-12 duration-300"
                 />
               )}

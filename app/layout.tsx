@@ -101,6 +101,10 @@ export default async function RootLayout({
           title={config.site.title}
           href="/rss.xml"
         />
+        {/* LCP 优化：预加载头部头像 */}
+        {config.site.avatar && (
+          <link rel="preload" as="image" href={config.site.avatar} />
+        )}
         {/* 自定义外部 CSS */}
         {config.customCss && <link rel="stylesheet" href={config.customCss} />}
       </head>

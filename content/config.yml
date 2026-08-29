@@ -10,8 +10,8 @@ site:
   keywords: ["鳞游", "技术", "博客", "生活", "记录", "分享", "个人博客"]
   url: "https://world123.top"
   favicon: "/favicon.ico"
-  # 头像图片 URL 或路径，留空则使用首字母头像
-  avatar: "https://aka.doubaocdn.com/s/gOsguUWU3Y"
+  # 头像图片 URL 或路径，留空则使用首字母头像（推荐本地路径，避免外站 CDN 拖慢 LCP）
+  avatar: "/avatar.jpg"
   # 头像是否为圆形
   avatarRounded: true
   # 头像旋转动画（悬停时）

@@ -1269,9 +1269,10 @@ a:hover {
   position: fixed;
   left: 0;
   top: 0;
-  width: 0;
-  height: 0;
-  transform: translate(-50%, -50%);
+  width: 420px;
+  height: 420px;
+  margin-left: -210px;
+  margin-top: -210px;
   border-radius: 50%;
   pointer-events: none;
   background: radial-gradient(
@@ -1281,8 +1282,10 @@ a:hover {
     transparent 70%
   );
   box-shadow: 0 0 0 2px rgba(252, 100, 35, 0.55);
+  /* 用 transform scale 展开（仅合成层，不触发 layout），RippleEffect 通过
+     style.left/top 定位点击点 */
   animation: ripple-anim 640ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  will-change: width, height, opacity, box-shadow;
+  will-change: transform, opacity;
 }
 
 /* 中键 / 右键 备用色 */
@@ -1308,13 +1311,11 @@ a:hover {
 
 @keyframes ripple-anim {
   0% {
-    width: 0;
-    height: 0;
+    transform: scale(0.02);
     opacity: 0.9;
   }
   100% {
-    width: 420px;
-    height: 420px;
+    transform: scale(1);
     opacity: 0;
     box-shadow: 0 0 0 0px transparent;
   }
@@ -1378,9 +1379,7 @@ a:hover {
   box-shadow: 0 0 18px rgba(252, 100, 35, 0.4), 0 0 36px rgba(252, 100, 35, 0.18),
     inset 0 0 10px rgba(252, 100, 35, 0.22);
   mix-blend-mode: screen;
-  backdrop-filter: blur(1px);
-  -webkit-backdrop-filter: blur(1px);
-  will-change: transform, width, height;
+  will-change: transform;
   transition: border-color 220ms ease, background 220ms ease, box-shadow 220ms ease;
 }
 
@@ -1423,21 +1422,22 @@ a:hover {
 }
 
 /* ============================================================
-   ③ Scroll Reveal —— 滚动进入视口淡入上移 / 滑动特效
+   ③ Scroll Reveal —— 滚动进入视口淡入上移 / 滑动特效（性能友好版）
+   - 不用 filter: blur（大量元素同时 blur 动画会阻塞主线程，TBT 大头）
+   - 不用 will-change（几十个元素常驻合成层浪费内存）
+   - 过渡声明放在终态 .revealed 上：hover 反馈恢复 300ms 灵敏度
    ============================================================ */
 .scroll-reveal-enabled .reveal {
   opacity: 0;
-  transform: translateY(26px) scale(0.98);
-  transition: opacity 720ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 720ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
-  filter: blur(3px);
+  transform: translateY(26px);
 }
 
 .scroll-reveal-enabled .reveal.revealed {
   opacity: 1;
-  transform: translateY(0) scale(1);
-  filter: blur(0);
+  transform: translateY(0);
+  transition: opacity 480ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 300ms ease,
+    border-color 300ms ease;
 }
 
 /* 针对不同元素的差异化进入动画（只作用于「未 revealed」的元素，避免特殊性覆盖终态） */
@@ -1468,12 +1468,6 @@ a:hover {
   transform: translateY(14px);
 }
 
-/* 鼠标悬停于 post-card 时的轻微上浮（与 reveal 叠加） */
-.post-card {
-  transition: transform 300ms ease, box-shadow 300ms ease, border-color 300ms ease,
-    opacity 720ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
 /* 平滑滚动（滚动行为） */
 html {
   scroll-behavior: smooth;
@@ -1482,16 +1476,11 @@ html {
 
 /* 滚动时头部的轻微视差感（可选） */
 .site-header {
-  transition: transform 260ms ease, box-shadow 260ms ease, background 260ms ease,
-    backdrop-filter 260ms ease;
-  will-change: transform;
+  transition: transform 260ms ease, box-shadow 260ms ease, background 260ms ease;
 }
 
-/* 侧边栏滚动时的"弹性吸附" —— 已经是 sticky，这里加一点点轻微阴影增强 */
-.sidebar-widget {
-  transition: transform 280ms ease, box-shadow 280ms ease, border-color 280ms ease,
-    opacity 720ms cubic-bezier(0.22, 1, 0.36, 1);
-}
+/* 侧边栏 / 文章卡片的悬停过渡由 .reveal.revealed 终态统一提供（300ms），
+   避免与 reveal 动画的过渡声明互相覆盖 */
 
 /* 减少动画（用户偏好） */
 @media (prefers-reduced-motion: reduce) {

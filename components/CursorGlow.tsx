@@ -3,11 +3,12 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * 自定义彩色鼠标光标：
- * - 双层：一个小的实心圆点 cursor-dot（紧跟鼠标），一个较大的渐变色光晕 cursor-glow（平滑跟随）
- * - 使用 requestAnimationFrame 做 lerp 平滑插值，避免光标抖动
- * - 悬停在链接 / 按钮 / 可点击元素上时：glow 放大 + 外发光加强 + dot 变色
- * - 通过 matchMedia('(pointer: coarse)') 检测触摸设备，自动关闭避免移动端卡顿
+ * 自定义彩色鼠标光标（性能友好版）：
+ * - 双层：小实心圆点 cursor-dot（紧跟鼠标）+ 渐变光晕 cursor-glow（lerp 平滑跟随）
+ * - rAF 循环【按需运行】：鼠标静止且动画收敛后自动停止，空闲时零主线程占用
+ *   （持续 rAF + mix-blend-mode/backdrop-filter 是 TBT 6s 的元凶之一，已移除）
+ * - 悬停链接 / 按钮 / 可点击元素：glow 放大 + 变色
+ * - 触摸设备（pointer: coarse）自动关闭
  */
 export default function CursorGlow() {
   const dotRef = useRef<HTMLDivElement>(null)
@@ -23,21 +24,62 @@ export default function CursorGlow() {
     if (!dot || !glow) return
 
     // 目标位置 & 当前位置（lerp 平滑）
-    let targetX = window.innerWidth / 2
-    let targetY = window.innerHeight / 2
-    let curX = targetX
-    let curY = targetY
-
-    // 尺寸状态
+    let targetX = -100
+    let targetY = -100
+    let curX = -100
+    let curY = -100
     let hoverScale = 1
     let targetHover = 1
+
+    let rafId = 0
+    let running = false
+    let firstMove = true
+
+    const tick = () => {
+      curX += (targetX - curX) * 0.22
+      curY += (targetY - curY) * 0.22
+      hoverScale += (targetHover - hoverScale) * 0.22
+
+      // dot 紧跟（几乎无延迟）
+      dot.style.transform = `translate3d(${targetX}px, ${targetY}px, 0) translate(-50%, -50%)`
+
+      // glow 平滑跟随；缩放走 transform（不触发 layout，仅合成）
+      glow.style.transform = `translate3d(${curX}px, ${curY}px, 0) translate(-50%, -50%) scale(${hoverScale.toFixed(3)})`
+
+      // 收敛判定：全部接近目标时停止 rAF，等下次 mousemove 再唤醒
+      const settled =
+        Math.abs(targetX - curX) < 0.3 &&
+        Math.abs(targetY - curY) < 0.3 &&
+        Math.abs(targetHover - hoverScale) < 0.01
+
+      if (settled) {
+        running = false
+        return
+      }
+      rafId = requestAnimationFrame(tick)
+    }
+
+    const wake = () => {
+      if (!running) {
+        running = true
+        rafId = requestAnimationFrame(tick)
+      }
+    }
 
     const onMove = (e: MouseEvent) => {
       targetX = e.clientX
       targetY = e.clientY
+      if (firstMove) {
+        // 首次移动：跳过从屏幕外飞入的插值
+        curX = targetX
+        curY = targetY
+        dot.style.opacity = '1'
+        glow.style.opacity = '1'
+        firstMove = false
+      }
+      wake()
     }
 
-    // 悬停检测：匹配所有可交互元素
     const interactiveSelector = [
       'a',
       'button',
@@ -56,18 +98,23 @@ export default function CursorGlow() {
 
     const onOver = (e: MouseEvent) => {
       const el = e.target as HTMLElement | null
-      if (el && el.closest?.(interactiveSelector)) {
-        targetHover = 2.2
-      } else {
-        targetHover = 1
+      const interactive = !!(el && el.closest?.(interactiveSelector))
+      const next = interactive ? 2.2 : 1
+      if (next !== targetHover) {
+        targetHover = next
+        // 颜色态只在状态切换时写，避免每帧 DOM attribute 写入
+        glow.dataset.hover = interactive ? '1' : '0'
+        wake()
       }
     }
 
     const onDown = () => {
       targetHover = 0.85
+      wake()
     }
     const onUp = () => {
       targetHover = 1
+      wake()
     }
 
     const onLeave = () => {
@@ -79,33 +126,6 @@ export default function CursorGlow() {
       glow.style.opacity = '1'
     }
 
-    let rafId = 0
-    const tick = () => {
-      // lerp
-      curX += (targetX - curX) * 0.22
-      curY += (targetY - curY) * 0.22
-      hoverScale += (targetHover - hoverScale) * 0.22
-
-      // dot 紧跟（快）
-      const dx = targetX + (curX - targetX) * 0.05
-      const dy = targetY + (curY - targetY) * 0.05
-      dot.style.transform = `translate3d(${dx}px, ${dy}px, 0) translate(-50%, -50%)`
-
-      // glow 慢跟随 + 随 hoverScale 变大小
-      const size = 28 * hoverScale
-      glow.style.transform = `translate3d(${curX}px, ${curY}px, 0) translate(-50%, -50%)`
-      glow.style.width = size + 'px'
-      glow.style.height = size + 'px'
-      if (hoverScale > 1.5) {
-        glow.dataset.hover = '1'
-      } else {
-        glow.dataset.hover = '0'
-      }
-
-      rafId = requestAnimationFrame(tick)
-    }
-    rafId = requestAnimationFrame(tick)
-
     window.addEventListener('mousemove', onMove, { passive: true })
     window.addEventListener('mouseover', onOver, { passive: true })
     window.addEventListener('mousedown', onDown)
@@ -113,7 +133,6 @@ export default function CursorGlow() {
     document.addEventListener('mouseleave', onLeave)
     document.addEventListener('mouseenter', onEnter)
 
-    // 隐藏原生光标：只对非表单区域生效
     const rootStyle = document.documentElement
     rootStyle.style.setProperty('--cursor-hide', '1')
 
