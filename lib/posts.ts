@@ -133,9 +133,11 @@ export async function getArchiveData(): Promise<
   const archiveMap = new Map<string, Map<string, Post[]>>()
 
   posts.forEach((post) => {
-    const date = new Date(post.date)
-    const year = date.getFullYear().toString()
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    // 按东八区分组年/月，与展示日期（timeZone: Asia/Shanghai）保持一致，
+    // 避免构建机为 UTC 时边界日期归错月份
+    const cn = new Date(new Date(post.date).getTime() + 8 * 3600 * 1000)
+    const year = cn.getUTCFullYear().toString()
+    const month = (cn.getUTCMonth() + 1).toString().padStart(2, '0')
 
     if (!archiveMap.has(year)) archiveMap.set(year, new Map())
     const yearMap = archiveMap.get(year)!

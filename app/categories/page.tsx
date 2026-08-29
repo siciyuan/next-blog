@@ -1,5 +1,6 @@
 import { getAllCategories, getPostsByCategory } from '@/lib/posts'
 import { getConfig } from '@/lib/config'
+import { formatDateShort } from '@/lib/utils'
 import PostList from '@/components/PostList'
 import TagCloud from '@/components/TagCloud'
 import Link from 'next/link'
@@ -64,7 +65,7 @@ export default async function CategoriesIndexPage() {
                 </span>
               </div>
               <p className="text-xs text-[var(--muted-color)]">
-                最近更新：{c.lastPostAt ? new Date(c.lastPostAt).toLocaleDateString() : '-'}
+                最近更新：{c.lastPostAt ? formatDateShort(c.lastPostAt) : '-'}
               </p>
             </Link>
           ))}
