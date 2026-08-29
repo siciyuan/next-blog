@@ -1,0 +1,217 @@
+# ============================================================
+# Site Settings - 站点信息配置
+# ============================================================
+site:
+  title: "鳞游の博客"
+  subtitle: "记录生活与技术"
+  description: "这是一个使用Hexo和Next主题搭建的个人博客"
+  author: "鳞游"
+  language: "zh-CN"
+  keywords: ["鳞游", "技术", "博客", "生活", "记录", "分享", "个人博客"]
+  url: "https://world123.top"
+  favicon: "/favicon.ico"
+  # 头像图片 URL 或路径，留空则使用首字母头像
+  avatar: "https://aka.doubaocdn.com/s/gOsguUWU3Y"
+  # 头像是否为圆形
+  avatarRounded: true
+  # 头像旋转动画（悬停时）
+  avatarAnimate: true
+
+# ============================================================
+# Theme Settings - 主题配置
+# ============================================================
+theme:
+  # 布局方案：muse | mist | pisces（三种布局有真实视觉差异）
+  # muse:   居中紧凑（980px），右侧栏为独立卡片，带柔和阴影（默认）
+  # mist:   宽幅极简（1200px），卡片扁平化——无阴影、浅色细边框、悬停不上浮
+  # pisces: 经典双栏（1200px），侧栏小部件合并为一块带边框的整体面板，
+  #         各部件之间用分隔线隔开；配合 sidebar.position: left 更贴近原版
+  layout: "muse"
+  # 主题模式：light | dark | auto
+  scheme: "auto"
+  # 主色调（链接、按钮、强调色）
+  primaryColor: "#222"
+  # 次强调色（悬停、标签等）
+  accentColor: "#fc6423"
+  # 是否显示文章目录
+  showToc: true
+  # 目录层级折叠
+  tocCollapsed: false
+  # 是否显示回到顶部按钮
+  showBackToTop: true
+  # 是否显示阅读进度条
+  showReadingProgress: true
+  # 每页文章数
+  postsPerPage: 10
+  # 代码高亮主题：github | one-dark | monokai
+  codeTheme: "github"
+  # 文章卡片圆角大小：none | small | medium | large
+  cardRadius: "medium"
+  # 文章是否显示封面图
+  showPostCover: true
+  # 文章列表是否显示摘要
+  showExcerpt: true
+  # 摘要长度（字符）
+  excerptLength: 200
+  # 字体族：serif | sans | mono
+  fontFamily: "sans"
+  # 链接下划线效果：always | hover | none
+  linkStyle: "hover"
+  # 动画速度：fast | normal | slow
+  animationSpeed: "normal"
+
+# ============================================================
+# Navigation Menu - 导航菜单配置
+# ============================================================
+# 可以为每个菜单项配置 badge 显示统计数字，如：posts / categories / tags
+nav:
+  - label: "首页"
+    path: "/"
+    icon: "home"
+  - label: "归档"
+    path: "/archives/"
+    icon: "archive"
+    badge: "posts"
+  - label: "分类"
+    path: "/categories/"
+    icon: "folder"
+    badge: "categories"
+  - label: "标签"
+    path: "/tags/"
+    icon: "tag"
+    badge: "tags"
+  - label: "关于"
+    path: "/about/"
+    icon: "user"
+  - label: "友链"
+    path: "/links/"
+    icon: "link"
+
+# ============================================================
+# Sidebar - 侧边栏配置
+# ============================================================
+sidebar:
+  # 侧边栏位置：left | right（仅在 mist/pisces scheme 下有效）
+  position: "right"
+  # 侧边栏是否为粘性（滚动时跟随）
+  sticky: true
+  # 侧边栏宽度
+  width: 280
+  # 侧边栏显示的小部件，顺序即显示顺序
+  widgets:
+    - "profile"       # 个人信息（头像 + 作者 + 三格统计）
+    - "stats"         # 站点统计卡片（总字数/运行天数/最近更新）
+    - "social"        # 社交链接
+    - "menu"          # 导航菜单（移动端友好）
+    - "recent_posts"  # 最近文章
+    - "categories"    # 分类
+    - "tagcloud"      # 标签云
+    - "links"         # 友情链接
+  # 最近文章数量
+  recentPostsCount: 5
+
+# ============================================================
+# Social Links - 社交链接配置
+# ============================================================
+social:
+  - name: "GitHub"
+    url: "https://github.com/yourname"
+    icon: "github"
+  - name: "Twitter"
+    url: "https://twitter.com/yourname"
+    icon: "twitter"
+  - name: "Email"
+    url: "mailto:your@email.com"
+    icon: "mail"
+  - name: "RSS"
+    url: "/rss.xml"
+    icon: "rss"
+
+# ============================================================
+# Friend Links - 友情链接（可选）
+# ============================================================
+links:
+  # avatar 留空或不填则显示首字母头像（避免外站图片被浏览器 ORB 策略拦截）
+  # 也可以放本地图片：avatar: "/friends/hexo.png"
+  - name: "Hexo"
+    url: "https://hexo.io"
+    description: "快速、简洁且高效的博客框架"
+  - name: "Next.js"
+    url: "https://nextjs.org"
+    description: "The React Framework for the Web"
+
+# ============================================================
+# Footer Settings - 页脚配置
+# ============================================================
+footer:
+  # 建站年份
+  since: 2024
+  # 是否显示 Powered by
+  powered: true
+  # 备案号（可选）
+  beian: ""
+  # 公安备案号（可选）
+  beianPublic: ""
+  # 自定义页脚 HTML（可选）
+  custom: ""
+  # 是否显示版权信息
+  showCopyright: true
+  # CC 协议
+  creativeCommons: false
+
+# ============================================================
+# Comments - 评论系统配置（已实现，enable: true 即生效）
+# ============================================================
+comments:
+  enable: true
+  # giscus | utterances | disqus | waline
+  provider: "giscus"
+  # ── giscus：基于 GitHub Discussions ──
+  repo: "siciyuan/blog"
+  repoId: "R_kgDORcXi_w"
+  category: "Announcements"
+  categoryId: "DIC_kwDORcXi_84C6EiT"
+  # ── utterances：基于 GitHub Issues ──
+  # repo: "yourname/your-repo"
+  # ── waline：自建评论服务 ──
+  # serverURL: "https://your-waline.example.com"
+  # ── disqus ──
+  # shortname: "your-disqus-shortname"
+
+# ============================================================
+# Search - 搜索配置
+# ============================================================
+search:
+  enable: true
+  placeholder: "搜索文章..."
+  # 是否启用 Ctrl+K 快捷键
+  hotkey: true
+
+# ============================================================
+# Post Settings - 文章详情页配置
+# ============================================================
+post:
+  # 是否显示上一篇/下一篇导航
+  showNav: true
+  # 是否显示修改时间
+  showUpdated: true
+  # 是否显示字数统计
+  showWordCount: true
+  # 是否显示阅读时间
+  showReadingTime: true
+  # 是否显示文章版权声明
+  showCopyright: false
+  # 版权声明文字
+  copyrightText: "本文采用 CC BY-NC-SA 4.0 协议，转载请注明出处。"
+  # 代码块是否显示行号
+  showLineNumber: true
+  # 代码块是否显示复制按钮
+  showCopyButton: true
+
+# ============================================================
+# Custom Code - 自定义代码注入（高级）
+# ============================================================
+# 自定义 CSS 路径（相对于 public 目录或完整 URL）
+customCss: ""
+# 自定义 JS 路径（相对于 public 目录或完整 URL）
+customJs: ""
