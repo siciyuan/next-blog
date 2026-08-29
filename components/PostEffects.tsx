@@ -92,7 +92,7 @@ export default function PostEffects({
         wrap.addEventListener('mouseleave', onLeave)
 
         const onClick = async () => {
-          const text = (code || pre).innerText
+          const text = (code || pre).textContent || ''
           try {
             await navigator.clipboard.writeText(text)
             const old = btn.textContent

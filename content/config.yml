@@ -43,7 +43,7 @@ theme:
   showReadingProgress: true
   # 每页文章数
   postsPerPage: 10
-  # 代码高亮主题：github | one-dark | monokai
+  # 代码高亮主题：github | one-dark | monokai | none（none 关闭高亮）
   codeTheme: "github"
   # 文章卡片圆角大小：none | small | medium | large
   cardRadius: "medium"

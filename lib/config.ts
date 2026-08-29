@@ -28,7 +28,7 @@ export type CardRadius = 'none' | 'small' | 'medium' | 'large'
 export type FontFamily = 'serif' | 'sans' | 'mono'
 export type LinkStyle = 'always' | 'hover' | 'none'
 export type AnimationSpeed = 'fast' | 'normal' | 'slow'
-export type CodeTheme = 'github' | 'one-dark' | 'monokai'
+export type CodeTheme = 'github' | 'one-dark' | 'monokai' | 'none'
 
 export interface ThemeConfig {
   layout: ThemeLayout
