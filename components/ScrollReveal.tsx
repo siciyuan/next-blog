@@ -3,11 +3,18 @@
 import { useEffect } from 'react'
 
 /**
- * 滚动进入视口淡入特效（性能友好版）：
- * - 首屏（初始视口内）元素【不做隐藏】——直接标记 revealed，避免「水合后闪隐再淡入」
- *   拖慢 FCP / SI / LCP（Lighthouse 的 SI 13s / TBT 6s 主要元凶）
- * - 只有初始视口外的元素才加 .reveal，滚动进入视口时淡入
- * - MutationObserver 仅在 rAF 空闲时重新观察新元素
+ * 滚动进入视口淡入特效（主线程友好版 v3）：
+ *
+ * 目标：零额外长任务，不拖 TBT/SI。策略：
+ * 1) 不用 MutationObserver 监听 attributes/class（React 水合期间触发几万次 class
+ *    变动，节流也挡不住 → 之前每 300ms 跑全文档 queryAll + getBoundingClientRect
+ *    是 TBT 第一元凶）。只监听 childList（路由切换插入新节点）。
+ * 2) 不逐个 getBoundingClientRect 判断"是否在首屏"（每个元素强制 reflow，几十元素
+ *    就是几十次同步 reflow，几百毫秒起）。改为按固定策略：
+ *      ▸ hero-banner / page-header / sidebar-profile / hero-stats-card：直接 revealed
+ *      ▸ 前 3 张 .post-card：直接 revealed（通常正好在视口内 / 贴近视口顶部）
+ *      ▸ 其它常见元素：加 .reveal，IO 触发。
+ * 3) 没有 setTimeout 回调遍历、没有频繁强制布局：markAll 纯 className 赋值 O(n)。
  */
 export default function ScrollReveal() {
   useEffect(() => {
@@ -15,44 +22,57 @@ export default function ScrollReveal() {
     if (!('IntersectionObserver' in window)) return
 
     const root = document.documentElement
-    // 不做「已启用即跳过」守卫：StrictMode 双执行 / Fast Refresh 重挂时
-    // cleanup 会移除 root 类并完整重新初始化，保证标记逻辑总能执行
     root.classList.add('scroll-reveal-enabled')
 
-    const vh = window.innerHeight
+    // 在屏/贴近视口、永远直接 revealed、不走隐藏/淡入、不占主线程计算
+    const ALWAYS_REVEALED = [
+      '.hero-banner',
+      '.page-header',
+      '.sidebar-profile',
+      '.hero-stats-card',
+    ]
 
-    // 自动给常见元素加上 reveal 类（避免改其它 server 组件）
-    const autoSelectors = [
+    // 其它元素：加 reveal，IO 触发淡入。注意 .post-card 只给前 3 张之前的 revealed。
+    const DEFER_SELECTORS = [
       '.post-card',
       '.sidebar-widget',
-      '.hero-banner',
-      '.hero-stats-card',
       '.archive-year-card',
       '.archive-timeline-item',
       '.category-card',
       '.tag-cloud-item',
       '.friend-card',
       '.site-footer',
-      '.page-header',
       '.markdown-content > *',
       '.post-footer-block',
       '.post-nav-item',
     ]
 
     const markAll = () => {
-      autoSelectors.forEach((sel) => {
+      // 1) 永远 revealed 类（贴近首屏 / 首屏必见）
+      ALWAYS_REVEALED.forEach((sel) => {
+        document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
+          if (el.classList.contains('revealed')) return
+          el.classList.add('revealed')
+          el.classList.remove('reveal')
+        })
+      })
+
+      // 2) post-card：前 3 张直接 revealed（基本都在视口内贴近首屏）
+      //    不用 getBoundingClientRect 判断 → 零强制 reflow
+      document.querySelectorAll<HTMLElement>('.post-card').forEach((el, idx) => {
+        if (el.classList.contains('revealed') || el.classList.contains('reveal')) return
+        if (idx < 3) {
+          el.classList.add('revealed')
+        } else {
+          el.classList.add('reveal')
+        }
+      })
+
+      // 3) 其它元素统一加 reveal（不在首屏，等待 IO 触发）
+      DEFER_SELECTORS.filter((s) => s !== '.post-card').forEach((sel) => {
         document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
           if (el.classList.contains('reveal') || el.classList.contains('revealed')) return
-          // 已在初始视口内的元素：直接 revealed（不隐藏、不闪隐、无动画开销）
-          const rect = el.getBoundingClientRect()
-          if (rect.top < vh && rect.bottom > 0) {
-            el.classList.add('revealed')
-            return
-          }
           el.classList.add('reveal')
-          // 首屏之下的按 DOM 顺序轻微错开，形成瀑布式出现
-          const delay = Math.min(document.querySelectorAll('.reveal').length % 8, 6) * 60
-          el.style.setProperty('--reveal-delay', `${delay}ms`)
         })
       })
     }
@@ -64,23 +84,18 @@ export default function ScrollReveal() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const el = entry.target as HTMLElement
-            const delay = parseInt(el.style.getPropertyValue('--reveal-delay') || '0', 10)
-            if (delay > 0) {
-              setTimeout(() => el.classList.add('revealed'), delay)
-            } else {
-              el.classList.add('revealed')
-            }
+            el.classList.add('revealed')
             io.unobserve(el)
           }
         })
       },
-      { threshold: 0.08, rootMargin: '0px 0px -40px 0px' },
+      { threshold: 0.05, rootMargin: '0px 0px -20px 0px' },
     )
 
     document.querySelectorAll('.reveal').forEach((el) => io.observe(el))
 
-    // 路由切换 / 新元素加入 / React 重渲染重置 className 时重新标记
-    // （监听 class 属性变化：客户端组件重建 DOM 节点后自动补上 reveal/revealed）
+    // 仅监听 childList（路由切换插入新 DOM）——不监听 attributes/class。
+    // 节流 300ms：避免 SPA 首帧的大量 DOM 插入触发多次 markAll。
     let timerId: ReturnType<typeof setTimeout> | undefined
     const mo = new MutationObserver(() => {
       if (timerId) return
@@ -90,12 +105,7 @@ export default function ScrollReveal() {
         document.querySelectorAll('.reveal:not(.revealed)').forEach((el) => io.observe(el))
       }, 300)
     })
-    mo.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class'],
-    })
+    mo.observe(document.body, { childList: true, subtree: true })
 
     return () => {
       io.disconnect()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { highlightCode } from '@/lib/highlight'
 import type { CodeTheme } from '@/lib/config'
 
@@ -11,64 +11,102 @@ interface PostEffectsProps {
 }
 
 /**
- * 文章页的客户端增强效果：
- * - 顶部阅读进度条
- * - 代码块：语法高亮 + 语言标签（常显）+ 复制按钮（悬停显示）
- * - 文章图片：点击放大（轻量 lightbox，ESC 关闭）
- * - 文章图片：懒加载（loading=lazy + decode=async）
+ * 文章页的客户端增强效果（主线程友好版 v2）：
+ * - 顶部阅读进度条（RAF + scroll passive）
+ * - 代码块：
+ *     ▸ 先做"轻量 DOM 改造"（包 wrap + 插按钮 + 插语言标签），不卡
+ *     ▸ 语法高亮正则分词是重 CPU ——【不在视口的 code 块，用 IO 延迟到滚到前 200px 才高亮】
+ *       直接避免一进入长文页就对 20+ 代码块跑完整正则分词。
+ * - 图片：懒加载 + 点击放大。
  */
 export default function PostEffects({
   showProgress = true,
   copyButton = true,
   codeTheme = 'github',
 }: PostEffectsProps) {
-  useEffect(() => {
-    // ---------- 阅读进度条 ----------
-    let removeScroll: (() => void) | undefined
+  const highlightRef = useRef<IntersectionObserver | null>(null)
 
-    if (showProgress) {
+  useEffect(() => {
+    // ---------- 阅读进度条（rAF 节流）----------
+    let rafId = 0
+    let scheduled = false
+    const update = () => {
+      scheduled = false
       const bar = document.getElementById('reading-progress')
-      if (bar) {
-        const update = () => {
-          const doc = document.documentElement
-          const top = window.scrollY || doc.scrollTop
-          const height = doc.scrollHeight - doc.clientHeight
-          const pct = height > 0 ? Math.min(100, (top / height) * 100) : 0
-          bar.style.width = pct + '%'
-        }
-        window.addEventListener('scroll', update, { passive: true })
-        window.addEventListener('resize', update)
-        update()
-        removeScroll = () => {
-          window.removeEventListener('scroll', update)
-          window.removeEventListener('resize', update)
-        }
-      }
+      if (!bar) return
+      const doc = document.documentElement
+      const top = window.scrollY || doc.scrollTop
+      const height = doc.scrollHeight - doc.clientHeight
+      const pct = height > 0 ? Math.min(100, (top / height) * 100) : 0
+      bar.style.width = pct + '%'
+    }
+    const onScroll = () => {
+      if (scheduled) return
+      scheduled = true
+      rafId = window.requestAnimationFrame(update)
+    }
+    if (showProgress) {
+      window.addEventListener('scroll', onScroll, { passive: true })
+      window.addEventListener('resize', onScroll)
+      update()
     }
 
-    // ---------- 代码块：包裹 + 语言标签 + 复制按钮 ----------
+    // ---------- 代码块：先做 DOM 包壳 + 按钮 + 语言标签（轻量）----------
     const cleanups: (() => void)[] = []
+
+    const applyHighlight = (code: HTMLElement, lang: string | undefined) => {
+      if (code.dataset.highlighted || codeTheme === 'none') return
+      code.dataset.highlighted = '1'
+      code.innerHTML = highlightCode(code.textContent || '', lang)
+    }
+
+    // 视外 code 块 → 延迟高亮（IO）；视内 → 立即高亮
+    let io: IntersectionObserver | null = null
+    if (typeof IntersectionObserver !== 'undefined') {
+      io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return
+            const code = entry.target as HTMLElement
+            const lang = code.className.match(/language-([\w-]+)/)?.[1]
+            applyHighlight(code, lang)
+            io?.unobserve(code)
+          })
+        },
+        { rootMargin: '200px 0px 200px 0px', threshold: 0 },
+      )
+      highlightRef.current = io
+    }
 
     document.querySelectorAll('.markdown-content pre').forEach((pre) => {
       if (pre.querySelector('.copy-btn') || pre.parentElement?.classList.contains('code-block-wrap')) {
         return
       }
 
-      // 包裹一层相对定位容器
+      // 包裹一层相对定位容器（轻量 DOM 操作）
       const wrap = document.createElement('div')
       wrap.style.position = 'relative'
       wrap.className = 'code-block-wrap'
       pre.parentNode?.insertBefore(wrap, pre)
       wrap.appendChild(pre)
 
-      // 语言标签（从 code 的 language-* class 提取）
-      const code = pre.querySelector('code')
+      const code = pre.querySelector<HTMLElement>('code')
       const lang = code?.className.match(/language-([\w-]+)/)?.[1]
 
-      // 语法高亮（幂等：已处理则跳过）
+      // 高亮：视内立即，视外 IO 延迟
       if (code && codeTheme !== 'none' && !code.dataset.highlighted) {
-        code.dataset.highlighted = '1'
-        code.innerHTML = highlightCode(code.textContent || '', lang)
+        if (!io) {
+          applyHighlight(code, lang) // 无 IO 兜底
+        } else {
+          const rect = code.getBoundingClientRect()
+          // 首屏高度范围（-200 → viewportH + 200）视为"即将进入视口"
+          const vh = window.innerHeight || 800
+          if (rect.top < vh + 200 && rect.bottom > -200) {
+            applyHighlight(code, lang)
+          } else {
+            io.observe(code)
+          }
+        }
       }
 
       if (lang) {
@@ -78,12 +116,12 @@ export default function PostEffects({
         wrap.appendChild(label)
       }
 
-      // 复制按钮
-      if (copyButton) {
+      if (copyButton && code) {
         const btn = document.createElement('button')
         btn.className = 'copy-btn'
         btn.type = 'button'
         btn.textContent = '复制'
+        btn.style.opacity = '0'
         wrap.appendChild(btn)
 
         const onEnter = () => (btn.style.opacity = '1')
@@ -92,7 +130,7 @@ export default function PostEffects({
         wrap.addEventListener('mouseleave', onLeave)
 
         const onClick = async () => {
-          const text = (code || pre).textContent || ''
+          const text = code.textContent || ''
           try {
             await navigator.clipboard.writeText(text)
             const old = btn.textContent
@@ -117,7 +155,7 @@ export default function PostEffects({
       }
     })
 
-    // ---------- 图片懒加载 + 点击放大（轻量 lightbox） ----------
+    // ---------- 图片懒加载 + 点击放大（lightbox）----------
     const images = document.querySelectorAll<HTMLImageElement>('.markdown-content img')
     images.forEach((img) => {
       if (img.dataset.enhanced) return
@@ -151,7 +189,12 @@ export default function PostEffects({
     })
 
     return () => {
-      removeScroll?.()
+      if (showProgress) {
+        window.removeEventListener('scroll', onScroll)
+        window.removeEventListener('resize', onScroll)
+        if (rafId) cancelAnimationFrame(rafId)
+      }
+      io?.disconnect()
       cleanups.forEach((fn) => fn())
     }
   }, [showProgress, copyButton, codeTheme])

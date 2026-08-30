@@ -1,9 +1,8 @@
 import { getConfig } from '@/lib/config'
 import { getAllPosts, getAllTags, getAllCategories } from '@/lib/posts'
+import dynamic from 'next/dynamic'
 import ThemeToggle from './ThemeToggle'
-import Search from './Search'
 import NavLinks, { type NavLinkItem } from './NavLinks'
-import MobileMenu from './MobileMenu'
 import HeaderShell from './HeaderShell'
 import {
   Home,
@@ -16,6 +15,17 @@ import {
   Link2,
 } from 'lucide-react'
 import type { NavBadgeType } from '@/lib/config'
+
+// Search / MobileMenu 默认折叠 / 关闭，首屏不参与交互。
+// dynamic(ssr:false) 让首屏水合跳过这些组件（直接减包减水合任务 → 降 TBT）。
+const Search = dynamic(() => import('./Search'), {
+  ssr: false,
+  loading: () => <div className="w-9 h-9 shrink-0" />,
+})
+const MobileMenu = dynamic(() => import('./MobileMenu'), {
+  ssr: false,
+  loading: () => <div className="w-9 h-9 shrink-0 md:hidden" />,
+})
 
 // 导航图标映射（与 Sidebar 保持一致）
 const navIconMap: Record<string, React.ReactNode> = {

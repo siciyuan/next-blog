@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import {
   getAllPosts,
@@ -9,10 +10,24 @@ import {
 import { getConfig } from '@/lib/config'
 import MarkdownContent from '@/components/MarkdownContent'
 import Toc from '@/components/Toc'
-import BackToTop from '@/components/BackToTop'
-import PostEffects from '@/components/PostEffects'
-import Comments from '@/components/Comments'
 import { formatDate } from '@/lib/utils'
+
+// 非首屏关键交互组件用 dynamic(ssr:false)：
+// SSR 阶段不输出这些组件的 JS/DOM，首屏水合不会执行它们的 effect，
+// 等到浏览器到了才懒加载包体 → 直接降低 TBT 和首屏包体。
+// 同时组件本体做了 IO 惰性挂载（Comments / PostEffects），进一步延迟执行。
+const BackToTop = dynamic(() => import('@/components/BackToTop'), {
+  ssr: false,
+  loading: () => null,
+})
+const PostEffects = dynamic(() => import('@/components/PostEffects'), {
+  ssr: false,
+  loading: () => null,
+})
+const Comments = dynamic(() => import('@/components/Comments'), {
+  ssr: false,
+  loading: () => null,
+})
 import {
   Calendar,
   Clock,
