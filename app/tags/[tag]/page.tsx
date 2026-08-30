@@ -1,6 +1,12 @@
 import { notFound } from 'next/navigation'
-import { getPostsByTag } from '@/lib/posts'
+import { getPostsByTag, getAllTags } from '@/lib/posts'
 import PostList from '@/components/PostList'
+
+// 静态导出：构建时预渲染所有标签页
+export async function generateStaticParams() {
+  const tags = await getAllTags()
+  return tags.map((t) => ({ tag: t.name }))
+}
 
 export async function generateMetadata({ params }: { params: { tag: string } }) {
   const tagName = decodeURIComponent(params.tag)

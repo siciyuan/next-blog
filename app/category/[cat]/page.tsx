@@ -1,6 +1,12 @@
 import { notFound } from 'next/navigation'
-import { getPostsByCategory } from '@/lib/posts'
+import { getPostsByCategory, getAllCategories } from '@/lib/posts'
 import PostList from '@/components/PostList'
+
+// 静态导出：构建时预渲染所有分类页
+export async function generateStaticParams() {
+  const cats = await getAllCategories()
+  return cats.map((c) => ({ cat: c.name }))
+}
 
 export async function generateMetadata({ params }: { params: { cat: string } }) {
   const catName = decodeURIComponent(params.cat)
