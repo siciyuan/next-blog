@@ -10,6 +10,7 @@ import {
 import { getConfig } from '@/lib/config'
 import MarkdownContent from '@/components/MarkdownContent'
 import Toc from '@/components/Toc'
+import IdleMount from '@/components/IdleMount'
 import { formatDate } from '@/lib/utils'
 
 // 非首屏关键交互组件用 dynamic(ssr:false)：
@@ -115,12 +116,14 @@ export default async function PostPage({ params }: { params: { slug: string } })
 
   return (
     <>
-      {/* 客户端增强：阅读进度条 + 代码复制按钮 */}
-      <PostEffects
-        showProgress={theme.showReadingProgress}
-        copyButton={config.post.showCopyButton}
-        codeTheme={theme.codeTheme}
-      />
+      {/* 客户端增强：阅读进度条 + 代码复制按钮（空闲期挂载，不占 TBT 预算） */}
+      <IdleMount fallback={null}>
+        <PostEffects
+          showProgress={theme.showReadingProgress}
+          copyButton={config.post.showCopyButton}
+          codeTheme={theme.codeTheme}
+        />
+      </IdleMount>
 
       <article className="relative">
         {/* 封面图 */}
@@ -229,8 +232,10 @@ export default async function PostPage({ params }: { params: { slug: string } })
             {/* 上下篇 */}
             {postConf.showNav && <PostNav prev={prev} next={next} />}
 
-            {/* 评论（按 config.comments 配置渲染） */}
-            <Comments comments={config.comments} />
+            {/* 评论（按 config.comments 配置渲染；空闲期挂载脚本） */}
+            <IdleMount fallback={null}>
+              <Comments comments={config.comments} />
+            </IdleMount>
           </div>
 
           {/* 目录 */}
@@ -244,7 +249,11 @@ export default async function PostPage({ params }: { params: { slug: string } })
         </div>
 
         {/* 回到顶部 */}
-        {theme.showBackToTop && <BackToTop />}
+        {theme.showBackToTop && (
+          <IdleMount fallback={null}>
+            <BackToTop />
+          </IdleMount>
+        )}
       </article>
     </>
   )

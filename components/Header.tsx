@@ -1,6 +1,7 @@
 import { getConfig } from '@/lib/config'
 import { getAllPosts, getAllTags, getAllCategories } from '@/lib/posts'
 import dynamic from 'next/dynamic'
+import IdleMount from './IdleMount'
 import ThemeToggle from './ThemeToggle'
 import NavLinks, { type NavLinkItem } from './NavLinks'
 import HeaderShell from './HeaderShell'
@@ -17,15 +18,10 @@ import {
 import type { NavBadgeType } from '@/lib/config'
 
 // Search / MobileMenu 默认折叠 / 关闭，首屏不参与交互。
-// dynamic(ssr:false) 让首屏水合跳过这些组件（直接减包减水合任务 → 降 TBT）。
-const Search = dynamic(() => import('./Search'), {
-  ssr: false,
-  loading: () => <div className="w-9 h-9 shrink-0" />,
-})
-const MobileMenu = dynamic(() => import('./MobileMenu'), {
-  ssr: false,
-  loading: () => <div className="w-9 h-9 shrink-0 md:hidden" />,
-})
+// dynamic(ssr:false) 跳过 SSR；再包一层 IdleMount，把 chunk 下载 + JS 解析 +
+// React 挂载全部推迟到主线程空闲期 → TBT 统计窗口内零占用。
+const Search = dynamic(() => import('./Search'), { ssr: false })
+const MobileMenu = dynamic(() => import('./MobileMenu'), { ssr: false })
 
 // 导航图标映射（与 Sidebar 保持一致）
 const navIconMap: Record<string, React.ReactNode> = {
@@ -93,11 +89,15 @@ export default async function Header() {
             {/* Right Controls */}
             <div className="flex items-center gap-1.5">
               {config.search.enable && (
-                <Search posts={searchPosts} placeholder={config.search.placeholder} />
+                <IdleMount fallback={<div className="w-9 h-9 shrink-0" />}>
+                  <Search posts={searchPosts} placeholder={config.search.placeholder} />
+                </IdleMount>
               )}
               <ThemeToggle />
               {/* Mobile Hamburger */}
-              <MobileMenu items={navItems} badges={badges} />
+              <IdleMount fallback={<div className="w-9 h-9 shrink-0 md:hidden" />}>
+                <MobileMenu items={navItems} badges={badges} />
+              </IdleMount>
             </div>
           </div>
         </div>

@@ -77,40 +77,63 @@ export default function ScrollReveal() {
       })
     }
 
-    markAll()
+    // ---- 空闲调度：把初始标记 + IO/MO 建立全部挪到主线程空闲期 ----
+    // TBT 只统计 FCP→TTI 窗口内的长任务；空闲期执行零占用。
+    // rIC timeout=2000 保证最迟 2s 内生效（慢设备兜底），不会永远不显示特效。
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+      cancelIdleCallback?: (id: number) => void
+    }
+    let idleId = 0
+    let io: IntersectionObserver | null = null
+    let mo: MutationObserver | null = null
+    let moTimer: ReturnType<typeof setTimeout> | undefined
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const el = entry.target as HTMLElement
-            el.classList.add('revealed')
-            io.unobserve(el)
-          }
-        })
-      },
-      { threshold: 0.05, rootMargin: '0px 0px -20px 0px' },
-    )
+    const observePending = () => {
+      document.querySelectorAll('.reveal:not(.revealed)').forEach((el) => io!.observe(el))
+    }
 
-    document.querySelectorAll('.reveal').forEach((el) => io.observe(el))
+    const start = () => {
+      markAll()
+      io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const el = entry.target as HTMLElement
+              el.classList.add('revealed')
+              io!.unobserve(el)
+            }
+          })
+        },
+        { threshold: 0.05, rootMargin: '0px 0px -20px 0px' },
+      )
+      observePending()
 
-    // 仅监听 childList（路由切换插入新 DOM）——不监听 attributes/class。
-    // 节流 300ms：避免 SPA 首帧的大量 DOM 插入触发多次 markAll。
-    let timerId: ReturnType<typeof setTimeout> | undefined
-    const mo = new MutationObserver(() => {
-      if (timerId) return
-      timerId = setTimeout(() => {
-        timerId = undefined
-        markAll()
-        document.querySelectorAll('.reveal:not(.revealed)').forEach((el) => io.observe(el))
-      }, 300)
-    })
-    mo.observe(document.body, { childList: true, subtree: true })
+      // 仅监听 childList（路由切换插入新 DOM）——不监听 attributes/class，
+      // React 水合期间 class 变更不会触发任何回调。
+      mo = new MutationObserver(() => {
+        if (moTimer) return
+        moTimer = setTimeout(() => {
+          moTimer = undefined
+          markAll()
+          observePending()
+        }, 300)
+      })
+      mo.observe(document.body, { childList: true, subtree: true })
+    }
+
+    if (typeof w.requestIdleCallback === 'function') {
+      idleId = w.requestIdleCallback(start, { timeout: 2000 })
+    } else {
+      idleId = window.setTimeout(start, 300)
+    }
 
     return () => {
-      io.disconnect()
-      mo.disconnect()
-      if (timerId) clearTimeout(timerId)
+      io?.disconnect()
+      mo?.disconnect()
+      if (moTimer) clearTimeout(moTimer)
+      if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(idleId)
+      else window.clearTimeout(idleId)
       root.classList.remove('scroll-reveal-enabled')
     }
   }, [])
