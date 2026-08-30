@@ -85,7 +85,21 @@ export async function getAllPosts(): Promise<Post[]> {
     )
 }
 
-export async function getPostBySlug(slug: string): Promise<Post | null> {
+/**
+ * 解码路由参数：App Router 传给 page 的 params 是 URL 编码后的原始串
+ * （如中文 slug 会是 %E5%B8%B8...），必须先解码再与文件名/元数据比较，
+ * 否则中文 slug 的文章/标签/分类页全部 404。
+ */
+function decodeParam(v: string): string {
+  try {
+    return decodeURIComponent(v)
+  } catch {
+    return v
+  }
+}
+
+export async function getPostBySlug(rawSlug: string): Promise<Post | null> {
+  const slug = decodeParam(rawSlug)
   const posts = await getAllPosts()
   return posts.find((p) => p.slug === slug) || null
 }
@@ -103,7 +117,8 @@ export async function getAllTags(): Promise<{ name: string; count: number }[]> {
     .sort((a, b) => b.count - a.count)
 }
 
-export async function getPostsByTag(tag: string): Promise<Post[]> {
+export async function getPostsByTag(rawTag: string): Promise<Post[]> {
+  const tag = decodeParam(rawTag)
   const posts = await getAllPosts()
   return posts.filter((post) => post.tags.includes(tag))
 }
@@ -121,7 +136,8 @@ export async function getAllCategories(): Promise<{ name: string; count: number 
     .sort((a, b) => b.count - a.count)
 }
 
-export async function getPostsByCategory(category: string): Promise<Post[]> {
+export async function getPostsByCategory(rawCategory: string): Promise<Post[]> {
+  const category = decodeParam(rawCategory)
   const posts = await getAllPosts()
   return posts.filter((post) => post.categories.includes(category))
 }
