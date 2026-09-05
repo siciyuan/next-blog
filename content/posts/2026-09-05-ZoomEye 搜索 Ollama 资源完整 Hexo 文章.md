@@ -1,9 +1,13 @@
 
 ---
 title: ZoomEye 精准搜索非域名类 Ollama AI 资源教程
+
 date: 2026-09-05 15:30:00
+
 tags: [网络资产测绘, Ollama, AI服务, ZoomEye]
+
 categories: 技术教程
+
 cover: /img/zoomeye-ollama-cover.jpg
 ---
 
