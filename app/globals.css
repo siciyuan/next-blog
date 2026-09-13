@@ -882,29 +882,76 @@ a:hover {
 }
 
 /* ============================================================
-   Avatar Animation
+   Avatar Animation（现代化：本体轻缩放 + 外圈旋转光环）
    ============================================================ */
 .avatar {
   display: block;
-  overflow: hidden;
+  position: relative;
+  /* 不再用 overflow:hidden：圆形裁切交给图片自身的圆角，
+     好让外圈光环能显示在头像外侧 */
 }
 
 .avatar.rounded {
   border-radius: 50%;
 }
 
-.avatar.animate:hover img,
-.avatar.animate:hover .avatar-placeholder {
-  transform: rotate(360deg) scale(1.05);
-}
-
 .avatar img,
 .avatar .avatar-placeholder {
-  transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: inherit;
+  /* easeOutQuint：单调收敛、不反向、不回摆，比旧版 back-ease 更现代更稳 */
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* 悬停：本体只做轻微放大 + 柔和投影（不再做会反向回摆的 360° 旋转） */
+.avatar.animate:hover img,
+.avatar.animate:hover .avatar-placeholder {
+  transform: scale(1.06);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+/* 外圈彩色光环（仅圆形头像）：默认收敛隐藏，悬停时淡入并匀速旋转 */
+.avatar.rounded.animate::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--accent-color),
+    #7cc7ff,
+    #b58cff,
+    var(--accent-color)
+  );
+  opacity: 0;
+  transform: scale(0.9);
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.avatar.rounded.animate:hover::before {
+  opacity: 0.85;
+  transform: scale(1);
+  animation: avatar-ring-spin 3s linear infinite;
+}
+
+@keyframes avatar-ring-spin {
+  from {
+    transform: scale(1) rotate(0deg);
+  }
+  to {
+    transform: scale(1) rotate(360deg);
+  }
 }
 
 .avatar-placeholder {
@@ -1489,6 +1536,13 @@ html {
   }
   .cursor-glow,
   .cursor-dot {
+    transition: none;
+  }
+  .avatar.rounded.animate:hover::before {
+    animation: none;
+  }
+  .avatar img,
+  .avatar .avatar-placeholder {
     transition: none;
   }
   .scroll-reveal-enabled .reveal {
