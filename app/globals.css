@@ -882,44 +882,52 @@ a:hover {
 }
 
 /* ============================================================
-   Avatar Animation（现代化：本体轻缩放 + 外圈旋转光环）
+   Avatar（双层结构）
+   .avatar-frame —— 外层：尺寸/居中/旋转光环，与卡片严格同心
+   .avatar       —— 内层：固定的圆形视窗（overflow 裁切）
+   img           —— 图片只在视窗内部位移/缩放，圆本身永远不偏
    ============================================================ */
-.avatar {
-  display: block;
+.avatar-frame {
   position: relative;
-  /* 不再用 overflow:hidden：圆形裁切交给图片自身的圆角，
-     好让外圈光环能显示在头像外侧 */
+  flex: 0 0 auto;
 }
 
-.avatar.rounded {
+.avatar {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--secondary-bg, #f5f5f5);
+}
+
+.avatar-frame.is-round .avatar {
   border-radius: 50%;
 }
 
 .avatar img,
 .avatar .avatar-placeholder {
-  position: relative;
-  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: inherit;
-  /* easeOutQuint：单调收敛、不反向、不回摆，比旧版 back-ease 更现代更稳 */
-  transition:
-    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  /* --avatar-tx：图片内容在圆内的水平微调（修正脸部视觉中心） */
+  transform: translateX(var(--avatar-tx, 0px));
+  /* easeOutQuint：单调收敛、不反向、不回摆 */
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 
-/* 悬停：本体只做轻微放大 + 柔和投影（不再做会反向回摆的 360° 旋转） */
-.avatar.animate:hover img,
-.avatar.animate:hover .avatar-placeholder {
-  transform: scale(1.06);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+/* 悬停：图片在圆形视窗内轻放大（位移保留，圆不动） */
+.avatar-frame.is-animate:hover .avatar img,
+.avatar-frame.is-animate:hover .avatar .avatar-placeholder {
+  transform: translateX(var(--avatar-tx, 0px)) scale(1.06);
 }
 
-/* 外圈彩色光环（仅圆形头像）：默认收敛隐藏，悬停时淡入并匀速旋转 */
-.avatar.rounded.animate::before {
+/* 旋转光环挂在外层 frame 上（不是垫在图片下面的圆），
+   inset 四边对称 → 与头像永远严格同心；默认隐藏，悬停淡入旋转 */
+.avatar-frame.is-round.is-animate::before {
   content: '';
   position: absolute;
   inset: -6px;
@@ -932,14 +940,14 @@ a:hover {
     var(--accent-color)
   );
   opacity: 0;
-  transform: scale(0.9);
+  transform: scale(0.92);
   transition:
     opacity 0.35s ease,
     transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
 
-.avatar.rounded.animate:hover::before {
+.avatar-frame.is-round.is-animate:hover::before {
   opacity: 0.85;
   transform: scale(1);
   animation: avatar-ring-spin 3s linear infinite;
@@ -1206,6 +1214,43 @@ a:hover {
   margin: 0 auto 1.5em;
   border-radius: 2px;
   opacity: 0.8;
+}
+
+/* ============================================================
+   Visit Counter（页脚访问统计）
+   ============================================================ */
+.site-counter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem 1.1rem;
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
+  color: var(--muted-color);
+}
+
+.counter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.counter-item svg {
+  opacity: 0.75;
+  flex: 0 0 auto;
+}
+
+.counter-num {
+  color: var(--accent-color);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 1ch;
+}
+
+.post-meta-item .counter-num {
+  font-size: inherit;
 }
 
 /* ============================================================
@@ -1538,7 +1583,7 @@ html {
   .cursor-dot {
     transition: none;
   }
-  .avatar.rounded.animate:hover::before {
+  .avatar-frame.is-round.is-animate:hover::before {
     animation: none;
   }
   .avatar img,

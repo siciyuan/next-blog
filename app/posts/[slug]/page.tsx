@@ -11,6 +11,7 @@ import { getConfig } from '@/lib/config'
 import MarkdownContent from '@/components/MarkdownContent'
 import Toc from '@/components/Toc'
 import IdleMount from '@/components/IdleMount'
+import { PageCounter } from '@/components/Counter'
 import { formatDate } from '@/lib/utils'
 
 // 非首屏关键交互组件用 dynamic(ssr:false)：
@@ -184,6 +185,9 @@ export default async function PostPage({ params }: { params: { slug: string } })
                 <span>{post.wordCount.toLocaleString()} 字</span>
               </span>
             )}
+
+            {/* 本页阅读量（不蒜子，可在 config.yml 关闭） */}
+            <PageCounter counter={config.counter} />
           </div>
 
           {/* 分类 & 标签 */}

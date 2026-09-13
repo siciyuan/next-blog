@@ -1,6 +1,7 @@
 import { getConfig } from '@/lib/config'
 import Link from 'next/link'
 import { Github, Twitter, Mail, Rss, Globe, MessageCircle, BookOpen, Instagram, Linkedin, Facebook, Youtube } from 'lucide-react'
+import { SiteCounter } from './Counter'
 
 const iconMap: Record<string, React.ReactNode> = {
   github: <Github size={15} />,
@@ -121,6 +122,9 @@ export default async function Footer() {
               dangerouslySetInnerHTML={{ __html: footer.custom }}
             />
           )}
+
+          {/* 访问计数器（不蒜子 / saobby，config.yml 配置） */}
+          <SiteCounter counter={config.counter} />
         </div>
       </div>
     </footer>

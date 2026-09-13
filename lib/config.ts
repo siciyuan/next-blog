@@ -17,6 +17,8 @@ export interface SiteConfig {
   avatar?: string
   avatarRounded?: boolean
   avatarAnimate?: boolean
+  /** 头像图片内容在圆形视窗内的水平微调（px，正值右移），用于修正脸部视觉不居中 */
+  avatarOffsetX?: number
 }
 
 // ============================================================
@@ -146,6 +148,24 @@ export interface SearchConfig {
 }
 
 // ============================================================
+// Visit Counter（访问计数器：不蒜子 / saobby）
+// ============================================================
+export type CounterProvider = 'busuanzi' | 'saobby'
+
+export interface CounterConfig {
+  enable: boolean
+  provider: CounterProvider
+  /** saobby 计数器 ID（https://w.saobby.com/w/<id>），仅 provider=saobby 时必填 */
+  saobbyId?: string
+  /** 页脚显示总访问量 */
+  showSitePv: boolean
+  /** 页脚显示总访客数 */
+  showSiteUv: boolean
+  /** 文章页 meta 显示本页阅读量（仅 busuanzi 支持按页统计） */
+  showPagePv: boolean
+}
+
+// ============================================================
 // Post Detail
 // ============================================================
 export interface PostConfig {
@@ -171,6 +191,7 @@ export interface BlogConfig {
   links: LinkItem[]
   footer: FooterConfig
   comments: CommentConfig
+  counter: CounterConfig
   search: SearchConfig
   post: PostConfig
   customCss?: string
@@ -199,6 +220,7 @@ export async function getConfig(): Promise<BlogConfig> {
       avatar: '',
       avatarRounded: true,
       avatarAnimate: true,
+      avatarOffsetX: 0,
       ...raw.site,
     },
     theme: {
@@ -250,6 +272,15 @@ export async function getConfig(): Promise<BlogConfig> {
       enable: false,
       provider: 'giscus',
       ...raw.comments,
+    },
+    counter: {
+      enable: false,
+      provider: 'busuanzi',
+      saobbyId: '',
+      showSitePv: true,
+      showSiteUv: true,
+      showPagePv: true,
+      ...raw.counter,
     },
     search: {
       enable: true,

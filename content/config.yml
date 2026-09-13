@@ -14,8 +14,11 @@ site:
   avatar: "/avatar.jpg"
   # 头像是否为圆形
   avatarRounded: true
-  # 头像旋转动画（悬停时）
+  # 头像悬停动画（轻放大 + 外圈彩色光环旋转）
   avatarAnimate: true
+  # 头像内容在圆形视窗内的水平微调（px）：正值图片右移、负值左移。
+  # 圆形视窗本身永远严格居中，此参数只修正图片里脸部视觉中心偏移
+  avatarOffsetX: 3
 
 # ============================================================
 # Theme Settings - 主题配置
@@ -177,6 +180,22 @@ comments:
   # serverURL: "https://your-waline.example.com"
   # ── disqus ──
   # shortname: "your-disqus-shortname"
+
+# ============================================================
+# Counter - 访问计数器
+# ============================================================
+counter:
+  enable: true
+  # busuanzi：不蒜子，按域名统计，免注册免 ID（默认）
+  # saobby：  需在 https://w.saobby.com 申请计数器 ID
+  provider: "busuanzi"
+  # provider: "saobby" 时填写（即 https://w.saobby.com/w/<这个ID>）
+  saobbyId: "bpxmok1l"
+  # 页脚：总访问量 / 总访客数
+  showSitePv: true
+  showSiteUv: true
+  # 文章页 meta：本页阅读量（仅 busuanzi 支持按页统计）
+  showPagePv: true
 
 # ============================================================
 # Search - 搜索配置

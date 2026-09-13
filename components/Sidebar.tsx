@@ -1,5 +1,6 @@
 import { getConfig } from '@/lib/config'
 import { getAllTags, getAllCategories, getAllPosts } from '@/lib/posts'
+import type { CSSProperties } from 'react'
 import TagCloud from './TagCloud'
 import TocSidebarSlot from './TocSidebarSlot'
 import MobileSidebarTabs from './MobileSidebarTabs'
@@ -92,22 +93,30 @@ function ProfileWidget({
 }) {
   const rounded = site.avatarRounded !== false
   const animate = site.avatarAnimate !== false
+  const offsetX = site.avatarOffsetX || 0
 
   return (
     <div className="sidebar-widget card-radius-medium text-center">
       {/* Avatar */}
       <div className="mb-4 flex justify-center">
         <div
-          className={`avatar ${rounded ? 'rounded' : ''} ${animate ? 'animate' : ''}`}
+          className={`avatar-frame ${rounded ? 'is-round' : ''} ${animate ? 'is-animate' : ''}`}
           style={{ width: 128, height: 128 }}
         >
-          {site.avatar ? (
-            <img src={site.avatar} alt={site.author} />
-          ) : (
-            <div className="avatar-placeholder text-4xl">
-              {site.author.charAt(0)}
-            </div>
-          )}
+          {/* .avatar 是固定的圆形视窗（overflow 裁切，圆心=frame 几何中心），
+              图片只在视窗内部平移微调，圆本身永远不会偏 */}
+          <div
+            className="avatar"
+            style={{ '--avatar-tx': `${offsetX}px` } as CSSProperties}
+          >
+            {site.avatar ? (
+              <img src={site.avatar} alt={site.author} />
+            ) : (
+              <div className="avatar-placeholder text-4xl">
+                {site.author.charAt(0)}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
